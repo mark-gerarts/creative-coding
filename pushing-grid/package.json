@@ -1,0 +1,16 @@
+{
+  "name": "Pushing grid",
+  "version": "1.0.0",
+  "description": "Pushing grid",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "concurrently \"browser-sync start --server -w\" \" tsc --watch\""
+  },
+  "homepage": "https://github.com/mark-gerarts/creative-coding",
+  "devDependencies": {
+    "@types/p5": "^0.7.2",
+    "browser-sync": "^2.26.7",
+    "concurrently": "^4.1.0",
+    "typescript": "^3.5.1"
+  }
+}
