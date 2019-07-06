@@ -1,6 +1,6 @@
 # Pushing grid
 
-Set up based on the [p5 typescript starter](https://github.com/Gaweph/p5-typescript-starter).
+![Pushing grid](https://github.com/mark-gerarts/creative-coding/blob/master/pushing-grid/pushing-grid.gif)
 
 To run the code:
 

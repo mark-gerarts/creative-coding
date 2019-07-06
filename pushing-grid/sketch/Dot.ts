@@ -2,12 +2,12 @@ class Dot {
 
     private readonly _mass: number;
     private readonly _startPosition: Vector;
-    private _position: Vector;
+    private readonly _position: Vector;
     private _acceleration: Vector;
 
     constructor(position: Vector, mass: number) {
         this._position = position;
-        this._startPosition = position;
+        this._startPosition = position.copy();
         this._mass = mass;
         this._acceleration = new Vector(0, 0);
     }
@@ -25,20 +25,17 @@ class Dot {
         this._acceleration.add(f);
     }
 
-    public update() {
-        // Apply repulsor force
-        // if (repulsor) {
-        //     const repulseForce = repulsor.repulse(this);
-        //     this.applyForce(repulseForce);
-        // }
+    public update(repulsor: Repulsor) {
+        const repulseForce = repulsor.repulse(this);
+        this.applyForce(repulseForce);
 
         // Add stickyness to startposition
-        const stickyForce = Vector.sub(this._position, this._startPosition);
+        const stickyForce = Vector.sub(this._startPosition, this._position);
         this.applyForce(stickyForce);
 
         // Apply the forces.
         this._position.add(this._acceleration);
-        this._acceleration = createVector(0, 0);
+        this._acceleration = new Vector(0, 0);
     }
 
     public draw() {
