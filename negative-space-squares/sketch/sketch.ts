@@ -11,6 +11,11 @@ enum Direction {
     LEFT
 }
 
+enum RotationDirection {
+    CLOCKWISE,
+    COUNTERCLOCKWISE
+}
+
 class Sketch {
     private readonly _circles: Circle[] = [];
 
@@ -18,9 +23,13 @@ class Sketch {
         p.createCanvas(p.windowWidth, p.windowHeight);
         p.background(settings.backgroundColor);
         this.initCircles(p);
+        this._circles.forEach((c) => {
+            c.rotate(RotationDirection.COUNTERCLOCKWISE, Math.PI);
+        })
     }
 
     public update(p: p5): void {
+        p.clear();
         this._circles.forEach((c) => {
             c.update(p, this);
         });

@@ -8,6 +8,7 @@
         "rootDir": "./sketch/",
         "sourceMap": true,
         "noImplicitAny": true,
+        "strictNullChecks": true,
         "module": "none"
     }
 }
