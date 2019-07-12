@@ -7,4 +7,6 @@
 /.psc*
 /.purs*
 /.psa*
-/dist/
+/dist
+/vendor-dll.js
+/vendor-manifest.json
