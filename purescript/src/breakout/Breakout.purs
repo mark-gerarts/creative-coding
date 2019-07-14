@@ -1,35 +1,83 @@
 module Breakout where
 
-import Prelude 
-  (Unit, show, bind, (<$>), pure, discard, unit, ($))
+import Prelude
+
+import Data.Int (toNumber)
+import Data.List.Lazy (List(..))
+import Data.Maybe (Maybe(..), maybe)
 import Effect (Effect)
 import Effect.Console (log)
-import Data.Maybe (Maybe(..), maybe)
-import Data.Int (toNumber)
+import Foreign.NullOrUndefined (undefined)
+import P5 (P5, draw, getP5, setup)
+import P5.Color (background3, fill, noStroke, stroke)
+import P5.Rendering (createCanvas)
+import P5.Shape (ellipse, rect, strokeWeight)
+import Vector (Vector)
 import Web.HTML (window)
 import Web.HTML.Window (innerWidth, innerHeight)
 
-import P5
-import P5.Color
-import P5.Data
-import P5.Environment
-import P5.Events
-import P5.IO
-import P5.Image
-import P5.LightsAndCamera
-import P5.Math
-import P5.Rendering
-import P5.Shape
-import P5.Structure
-import P5.Transform
-import P5.Typography
-
 type AppState = {
-  p5 :: P5
+  p5 :: P5,
+  ball :: Ball
+  {- paddle :: Paddle,
+  bricks :: List Brick -}
 }
 
+data Color = Primary | Secondary
+
+type Position = Vector
+
+newtype Brick = Brick {
+  position :: Position,
+  width :: Number,
+  height :: Number,
+  color :: Color
+}
+
+newtype Paddle = Paddle {
+  position :: Position,
+  width :: Number,
+  height :: Number,
+  color :: Color
+}
+
+newtype Ball = Ball {
+  position :: Position,
+  radius :: Number,
+  color :: Color
+}
+
+class Draw a where
+  drawObject :: P5 -> a -> Effect Unit
+
+instance drawBrick :: Draw Brick where
+  drawObject p brick = do
+    noStroke
+    fill (getHex brick.color)
+    rect p brick.position.x brick.position.y brick.width brick.height
+
+instance drawPaddle :: Draw Paddle where
+  drawObject p paddle = do
+    noStroke
+    fill (getHex paddle.color)
+    rect p paddle.position.x paddle.position.y paddle.width paddle.weight 
+
+instance drawBall :: Draw Ball where
+  drawObject p ball = do
+    noStroke
+    (fill . getHex) ball.color
+    ellipse ball.position.x ball.position.y ball.radius ball.radius
+
+getHex :: Color -> String
+getHex c = case c of
+  Primary -> "#0093e0"
+  Secondary -> "#eeeeee"
+
 initialState :: Maybe AppState
-initialState = Nothing
+initialState = Just {
+  p5: getP5,
+  ball: Ball { position: {x: 10.0, y: 10.0}, radius: 5.0, color: Primary}
+}
 
 main :: Maybe AppState -> Effect (Maybe AppState)
 main mAppState = do
@@ -38,23 +86,12 @@ main mAppState = do
   h <- toNumber <$> innerHeight win
   p <- maybe getP5 (\x -> pure x.p5) mAppState
 
-  let palette = 
-        { a: "#4d0c40"
-        , b: "#a11a23"
-        , c: "#b29179"
-        , d: "#c0a476"
-        , e: "#9d7f38"
-        }
   setup p do
     _ <- createCanvas p w h Nothing
+    background3 p (getHex Secondary) Nothing
     pure unit
 
   draw p do
-    background3 p palette.b Nothing
-    stroke p palette.a
-    strokeWeight p 5.0
-    rect p 100.0 100.0 50.0 50.0 Nothing Nothing
-    rect p 110.0 110.0 50.0 50.0 Nothing Nothing
     pure unit
 
-  pure $ Just { p5: p }
+  pure $ Just { p5: p, ball: mAppState.ball }
