@@ -2,27 +2,28 @@ module Breakout where
 
 import Prelude
 
+import Control.Monad.State (StateT, execStateT, get, lift, put)
 import Data.Int (toNumber)
-import Data.List.Lazy (List(..))
 import Data.Maybe (Maybe(..), maybe)
 import Effect (Effect)
 import Effect.Console (log)
-import Foreign.NullOrUndefined (undefined)
+import Node.Crypto.Hmac (update)
 import P5 (P5, draw, getP5, setup)
-import P5.Color (background3, fill, noStroke, stroke)
+import P5.Color (clear, fill, noStroke)
 import P5.Rendering (createCanvas)
-import P5.Shape (ellipse, rect, strokeWeight)
-import Vector (Vector, add)
+import P5.Shape (ellipse, rect)
+import Vector (Vector, add, dot)
 import Web.HTML (window)
-import Web.HTML.HTMLObjectElement (height)
-import Web.HTML.HTMLProgressElement (position)
 import Web.HTML.Window (innerWidth, innerHeight)
 
 type AppState = {
-  p5 :: P5,
-  ball :: Ball,
-  paddle :: Paddle
-  -- bricks :: List Brick
+  p5 :: P5
+}
+
+type DrawState = {
+  width :: Number, -- Better move width/height to a reader
+  height :: Number,
+  ball :: Ball
 }
 
 data Color = Primary | Secondary
@@ -80,14 +81,21 @@ getHex c = case c of
   Secondary -> "#eeeeee"
 
 initialState :: Maybe AppState
-initialState = Nothing 
+initialState = Nothing
+
+initialDrawState :: Number -> Number -> DrawState
+initialDrawState gameWidth gameHeight = { 
+  width: gameWidth,
+  height: gameHeight,
+  ball: initialBall gameWidth gameHeight 
+}
 
 initialBall :: Number -> Number -> Ball
 initialBall gameWidth gameHeight = Ball { 
   position: {x: gameWidth / 2.0, y: gameHeight - 150.0 }, 
   radius: 20.0, 
   color: Primary,
-  a: { x: 20.0, y: 20.0 }
+  a: { x: 2.0, y: 2.0 }
 }
 
 initialPaddle :: Number -> Number -> Paddle
@@ -98,9 +106,38 @@ initialPaddle gameWidth gameHeight = Paddle {
   color: Primary
 }
 
--- @todo: merge this in an updateAppState or something.
-updateBall :: Ball -> Ball
-updateBall (Ball ball) = Ball (ball { position = add ball.position ball.a})
+updateState :: DrawState -> DrawState
+updateState s = 
+  -- let ball = updateBall s.width s.height s.ball
+  s
+
+updateBall :: Ball -> Number -> Number -> Ball
+updateBall ball w h = 
+  let newPosition = add ball.position ball.a
+      xOutOfBounds = newPosition.x - radius <= 0 || newPosition.x + radius >= w
+      yOutOfBounds = newPosition.y - radius <= 0 || newPosition.y + radius >= h
+      a = { x: if xOutOfBounds then -1 else 1, y: if yOutOfBounds then -1 else 0}
+      
+      { position: (add ball.position ball.a), a: (dot a ball.a) }
+
+drawStep :: P5 -> StateT DrawState Effect Unit
+drawStep p = do
+  state <- get
+  let {ball} = state
+  put $ updateState state
+
+  lift $ clear p
+  lift $ drawObject p ball
+
+drawSketch :: P5 -> StateT DrawState Effect Unit
+drawSketch p = do
+  drawStep p
+  pure unit
+
+statefulDraw :: P5 -> DrawState -> Effect Unit
+statefulDraw p state = do
+  s <- execStateT (drawSketch p) state
+  draw p (statefulDraw p s)
 
 -- @todo: figure out how to update state :(
 main :: Maybe AppState -> Effect (Maybe AppState)
@@ -109,19 +146,13 @@ main mAppState = do
   w <- toNumber <$> innerWidth win
   h <- toNumber <$> innerHeight win
   p <- maybe getP5 (\x -> pure x.p5) mAppState
-  ball <- maybe (pure $ initialBall w h) (\x -> pure x.ball) mAppState
-  paddle <- maybe (pure $ initialPaddle w h) (\x -> pure x.paddle) mAppState
+
+  let drawState = initialDrawState w h
 
   setup p do
     _ <- createCanvas p w h Nothing
-    log "Setting up"
     pure unit
 
-  draw p do
-    background3 p (getHex Secondary) Nothing
-    drawObject p ball
-    drawObject p paddle
-    log "Drawing"
-    pure unit
+  draw p (statefulDraw p drawState)
 
-  pure $ Just { p5: p, ball: ball, paddle: paddle}
+  pure $ Just { p5: p }
