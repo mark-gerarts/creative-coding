@@ -2,7 +2,7 @@ module Breakout where
 
 import Prelude
 
-import Control.Monad.State (StateT, execStateT, get, lift)
+import Control.Monad.State (StateT, execStateT, get, lift, put)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..), maybe)
 import Effect (Effect)
@@ -10,7 +10,7 @@ import P5 (P5, draw, getP5, setup)
 import P5.Color (background3, clear, fill, noStroke)
 import P5.Rendering (createCanvas)
 import P5.Shape (ellipse)
-import Vector (Vector)
+import Vector (Vector, dot)
 import Web.HTML (window)
 import Web.HTML.Window (innerHeight, innerWidth)
 
@@ -19,6 +19,8 @@ type AppState = {
 }
 
 type GameState = {
+  gameWidth :: Number,
+  gameHeight :: Number,
   ball :: Ball
 }
 
@@ -30,6 +32,15 @@ data Ball = Ball {
   a :: Vector
 }
 
+constrain :: forall a. Ord a => a -> a -> a -> a
+constrain x min max
+    | x < min = min
+    | x > max = max
+    | otherwise = x
+
+isOutOfBounds :: forall a. Ord a => a -> a -> a -> Boolean
+isOutOfBounds x min max = x <= min || x >= max
+
 initialState :: Maybe AppState
 initialState = Nothing
 
@@ -39,18 +50,40 @@ drawBall p (Ball ball) = do
   fill p ("#0093e0")
   ellipse p ball.p.x ball.p.y ball.r (Just ball.r)
 
-drawStep :: P5 -> StateT GameState Effect Unit
-drawStep p = do
-  state <- get
+updateBall :: Ball -> Number -> Number -> Ball
+updateBall (Ball ball) w h =
+  let
+    updatedPosition = add ball.p ball. a
+    constrainedPosition = {
+      x: constrain updatedPosition.x 0.0 w,
+      y: constrain updatedPosition.y 0.0 h
+    }
+    bounce = {
+      x: if isOutOfBounds updatedPosition.x 0.0 w then -1.0 else 1.0,
+      y: if isOutOfBounds updatedPosition.y 0.0 h then -1.0 else 1.0
+    }
+  in
+    Ball ball { p = constrainedPosition, a = dot bounce ball.a }
 
-  lift $ clear p
-  lift $ background3 p "#eeeeee" Nothing
-  lift $ drawBall p (state.ball)
+updateStep :: P5 -> StateT GameState Effect Unit
+updateStep p = do
+  state <- get
+  let ball = state.ball
+      newBall = updateBall state.ball state.gameWidth state.gameHeight
+  put $ state { ball = newBall }
+  pure unit
+
+drawStep :: P5 -> GameState -> Effect Unit
+drawStep p state = do
+  clear p
+  background3 p "#eeeeee" Nothing
+  drawBall p (state.ball)
 
 drawSketch :: P5 -> StateT GameState Effect Unit
 drawSketch p = do
-  drawStep p
-  pure unit
+  state <- get
+  updateStep p
+  lift $ drawStep p state
 
 statefulDraw :: P5 -> GameState -> Effect Unit
 statefulDraw p state = do
@@ -65,8 +98,11 @@ main mAppState = do
   p <- maybe getP5 (\x -> pure x.p5) mAppState
 
   let
-    initialBall = Ball { p: {x: w / 2.0, y: h / 2.0}, r: 20.0, a: { x: 2.0, y: 2.0 } }
-    initialGameState = { ball: initialBall }
+    centerX = w / 2.0
+    centerY = h / 2.0
+    center = { x: centerX, y: centerY }
+    initialBall = Ball { p: center, r: 20.0, a: { x: 5.0, y: 5.0 } }
+    initialGameState = { gameWidth: w, gameHeight: h, ball: initialBall }
 
   setup p do
     _ <- createCanvas p w h Nothing
