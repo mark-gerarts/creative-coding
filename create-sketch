@@ -1,0 +1,36 @@
+#!/bin/bash
+
+PROJECT_NAME=$1
+if [ "$PROJECT_NAME" == "" ]; then
+    echo "Provide a project name"
+    exit 1
+fi
+
+if [ -d $PROJECT_NAME ]; then
+    echo "Directory already exists"
+ #   exit 1
+fi
+
+git clone https://github.com/Gaweph/p5-typescript-starter.git $PROJECT_NAME
+
+cd $PROJECT_NAME
+
+# Delete unused files.
+rm -rf .git/
+rm readme.md
+rm LICENSE
+rm p5-typescript-demo.gif
+rm p5-typescript-demo.png
+rm build/build.js
+touch build/.gitkeep
+
+# Add our own readme.
+touch README.md
+echo "# $PROJECT_NAME" > README.md
+echo "Based on the [starter kit provided by Gaweph](https://github.com/Gaweph/p5-typescript-starter)" >> README.md
+
+# Add our own standard sketch file.
+rm sketch/*
+cp ../sketch-template.ts sketch/sketch.ts
+
+npm install
