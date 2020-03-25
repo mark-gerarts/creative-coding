@@ -34,3 +34,8 @@ rm sketch/*
 cp ../sketch-template.ts sketch/sketch.ts
 
 npm install
+
+# After install:
+# - Add --no-notify to browsersync
+#
+# Might be better off using my own starterkit.
