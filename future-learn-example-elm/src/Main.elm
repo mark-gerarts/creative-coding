@@ -10,17 +10,19 @@ import Canvas.Settings.Text exposing (..)
 import Color exposing (Color)
 import Grid exposing (fold2d)
 import Html exposing (Html)
-import List exposing (map)
+import List exposing (filter, map)
 
 
-type State
-    = Growing
-    | Shrinking
+type alias Palette =
+    { bg : Color
+    , squares : Color
+    , circles : Color
+    , smallCircles : Color
+    }
 
 
 type alias Model =
     { count : Float
-    , state : State
     }
 
 
@@ -40,27 +42,36 @@ main =
 
 width : Int
 width =
-    500
+    800
 
 
 height : Int
 height =
-    500
+    width
 
 
 baseLength : Float
 baseLength =
-    50
+    toFloat width / 10
 
 
-bg : Color
-bg =
-    Color.black
+palette : Palette
+palette =
+    { bg = Color.black
+    , squares = Color.darkGreen
+    , circles = Color.lightPurple
+    , smallCircles = Color.lightCharcoal
+    }
+
+
+transparent : Color
+transparent =
+    Color.rgba 0 0 0 0
 
 
 init : () -> ( Model, Cmd Msg )
 init () =
-    ( { count = 0, state = Growing }, Cmd.none )
+    ( { count = 0 }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -75,16 +86,25 @@ view { count } =
 
 clearScreen : Renderable
 clearScreen =
-    shapes [ fill bg ] [ rect ( 0, 0 ) (toFloat width) (toFloat height) ]
+    shapes [ fill palette.bg ] [ rect ( 0, 0 ) (toFloat width) (toFloat height) ]
 
 
 render : Float -> List Renderable
 render count =
     let
         growthFactor =
-            sin (degrees count)
+            2 + sin (degrees (count / 2))
     in
-    [ clearScreen, renderSquares growthFactor, renderCircles, renderSmallCircles ]
+    [ clearScreen
+    , renderSquares growthFactor
+    , renderCircles growthFactor
+    , renderSmallCircles growthFactor
+    ]
+
+
+centerPoint : Point -> Point
+centerPoint ( x, y ) =
+    ( x + baseLength / 2, y + baseLength / 2 )
 
 
 gridCoordinates : List ( Float, Float )
@@ -106,43 +126,58 @@ renderSquares growthFactor =
             baseLength * growthFactor
 
         squares =
-            map (\p -> rect p w w) gridCoordinates
+            gridCoordinates
+                |> map centerPoint
+                |> map (\( x, y ) -> rect ( x - w / 2, y - w / 2 ) w w)
 
         settings =
-            [ fill (Color.rgba 0 0 0 0), stroke Color.white, lineWidth 2 ]
+            [ fill transparent
+            , stroke palette.squares
+            , lineWidth 2
+            ]
     in
     shapes settings squares
 
 
-renderCircles : Renderable
-renderCircles =
+renderCircles : Float -> Renderable
+renderCircles growthFactor =
     let
-        movePointToCenter ( x, y ) =
-            ( x + (baseLength / 2), y + (baseLength / 2) )
+        r =
+            (baseLength / 2) * growthFactor
 
         circles =
             gridCoordinates
-                |> map movePointToCenter
-                |> map (\p -> circle p (baseLength / 2))
+                |> map centerPoint
+                |> map (\p -> circle p r)
 
         settings =
-            [ fill (Color.rgba 0 0 0 0), stroke Color.white, lineWidth 2 ]
+            [ fill transparent
+            , stroke palette.circles
+            , lineWidth 2
+            ]
     in
     shapes settings circles
 
 
-renderSmallCircles : Renderable
-renderSmallCircles =
+renderSmallCircles : Float -> Renderable
+renderSmallCircles growthFactor =
     let
+        r =
+            (baseLength / 4) * growthFactor
+
         movePointToBottomRight ( x, y ) =
             ( x + baseLength, y + baseLength )
 
         circles =
             gridCoordinates
                 |> map movePointToBottomRight
-                |> map (\p -> circle p (baseLength / 4))
+                |> filter (\( x, y ) -> x < toFloat width && y < toFloat height)
+                |> map (\p -> circle p r)
 
         settings =
-            [ fill (Color.rgba 0 0 0 0), stroke Color.white, lineWidth 2 ]
+            [ fill transparent
+            , stroke palette.smallCircles
+            , lineWidth 2
+            ]
     in
     shapes settings circles
