@@ -33,12 +33,12 @@ main =
 
 width : Float
 width =
-    800
+    700
 
 
 height : Float
 height =
-    800
+    700
 
 
 subscriptions : Model -> Sub Msg
@@ -92,6 +92,6 @@ renderLines mousePosition =
                 [ fill Color.black
                 , transform [ translate x y, rotate (angle ( x, y )) ]
                 ]
-                [ rect ( 0, 0 ) 2 10 ]
+                [ rect ( -1, -5 ) 2 10 ]
     in
     map toLine coordinates
